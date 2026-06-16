@@ -1,24 +1,25 @@
 import dearpygui.dearpygui as dpg
 
-from storage import load_tasks
-from storage import save_tasks
-
+from storage import load_tasks, save_tasks
 from theme import setup_theme
 
 tasks = []
-
 current_filter = "all"
 
 dpg.create_context()
+# setup_theme()
 
-setup_theme()
+
+# ==========================
+# STATISTIQUES
+# ==========================
+
 def update_stats():
 
     total = len(tasks)
 
     completed = sum(
-        1
-        for t in tasks
+        1 for t in tasks
         if t["completed"]
     )
 
@@ -51,34 +52,32 @@ def update_stats():
 
     dpg.set_value(
         "progress_text",
-        f"{int(percent*100)}%"
+        f"{int(percent * 100)}%"
     )
+
+
+# ==========================
+# AJOUT TACHE
+# ==========================
+
 def add_task():
 
-    title = dpg.get_value(
-        "task_input"
-    )
-
-    due = dpg.get_value(
-        "due_input"
-    )
-
-    priority = dpg.get_value(
-        "priority_combo"
-    )
+    title = dpg.get_value("task_input")
+    due = dpg.get_value("due_input")
+    priority = dpg.get_value("priority_combo")
 
     if not title.strip():
         return
 
-    task = {
-        "title": title,
-        "completed": False,
-        "favorite": False,
-        "priority": priority,
-        "due_date": due
-    }
-
-    tasks.append(task)
+    tasks.append(
+        {
+            "title": title,
+            "completed": False,
+            "favorite": False,
+            "priority": priority,
+            "due_date": due
+        }
+    )
 
     save_tasks(tasks)
 
@@ -88,16 +87,26 @@ def add_task():
     )
 
     rebuild_tasks()
-def toggle_complete(index):
 
-    tasks[index]["completed"] = \
-        not tasks[index]["completed"]
+
+# ==========================
+# ACTIONS
+# ==========================
+
+def toggle_complete(sender, app_data, user_data):
+
+    index = user_data
+
+    tasks[index]["completed"] = app_data
 
     save_tasks(tasks)
 
-    rebuild_tasks()
+    update_stats()
 
-def toggle_favorite(index):
+
+def toggle_favorite(sender, app_data, user_data):
+
+    index = user_data
 
     tasks[index]["favorite"] = \
         not tasks[index]["favorite"]
@@ -106,13 +115,22 @@ def toggle_favorite(index):
 
     rebuild_tasks()
 
-def delete_task(index):
+
+def delete_task(sender, app_data, user_data):
+
+    index = user_data
 
     tasks.pop(index)
 
     save_tasks(tasks)
 
     rebuild_tasks()
+
+
+# ==========================
+# FILTRES
+# ==========================
+
 def set_filter(sender, app_data, user_data):
 
     global current_filter
@@ -120,21 +138,29 @@ def set_filter(sender, app_data, user_data):
     current_filter = user_data
 
     rebuild_tasks()
+
+
 def task_visible(task):
 
     if current_filter == "all":
         return True
 
-    if current_filter == "completed":
-        return task["completed"]
-
     if current_filter == "todo":
         return not task["completed"]
+
+    if current_filter == "completed":
+        return task["completed"]
 
     if current_filter == "favorites":
         return task["favorite"]
 
     return True
+
+
+# ==========================
+# REBUILD
+# ==========================
+
 def rebuild_tasks():
 
     dpg.delete_item(
@@ -142,7 +168,7 @@ def rebuild_tasks():
         children_only=True
     )
 
-    for i, task in enumerate(tasks):
+    for index, task in enumerate(tasks):
 
         if not task_visible(task):
             continue
@@ -154,38 +180,54 @@ def rebuild_tasks():
 
             dpg.add_checkbox(
                 default_value=task["completed"],
-                callback=lambda s,a,u=i:
-                    toggle_complete(u)
+                callback=toggle_complete,
+                user_data=index
             )
 
-            star = "⭐" \
-                if task["favorite"] \
-                else "☆"
-
             dpg.add_button(
-                label=star,
-                callback=lambda s,a,u=i:
-                    toggle_favorite(u)
+                label="⭐" if task["favorite"] else "☆",
+                callback=toggle_favorite,
+                user_data=index
             )
 
             label = task["title"]
 
             if task["due_date"]:
-                label += \
+                label += (
                     f" | {task['due_date']}"
+                )
 
-            label += \
+            label += (
                 f" | {task['priority']}"
+            )
 
-            dpg.add_text(label)
+            if task["priority"] == "High":
+                color = (255, 80, 80)
+
+            elif task["priority"] == "Medium":
+                color = (255, 200, 0)
+
+            else:
+                color = (80, 220, 120)
+
+            dpg.add_text(
+                label,
+                color=color
+            )
 
             dpg.add_button(
                 label="Supprimer",
-                callback=lambda s,a,u=i:
-                    delete_task(u)
+                callback=delete_task,
+                user_data=index
             )
 
     update_stats()
+
+
+# ==========================
+# INTERFACE
+# ==========================
+
 with dpg.window(
     label="Todo Manager Pro",
     width=1200,
@@ -194,32 +236,36 @@ with dpg.window(
 
     with dpg.group(horizontal=True):
 
+        # ----------------------
+        # MENU GAUCHE
+        # ----------------------
+
         with dpg.child_window(
             width=250
-        ):
+        ):  
 
             dpg.add_text("Navigation")
 
             dpg.add_button(
-                label="Toutes",
+                label="📋 Toutes",
                 callback=set_filter,
                 user_data="all"
             )
 
             dpg.add_button(
-                label="À faire",
+                label="⏳À faire",
                 callback=set_filter,
                 user_data="todo"
             )
 
             dpg.add_button(
-                label="Terminées",
+                label="✅Terminées",
                 callback=set_filter,
                 user_data="completed"
             )
 
             dpg.add_button(
-                label="Favoris",
+                label="⭐Favoris",
                 callback=set_filter,
                 user_data="favorites"
             )
@@ -243,14 +289,33 @@ with dpg.window(
 
             dpg.add_progress_bar(
                 default_value=0,
-                tag="progress",
-                width=200
+                width=200,
+                tag="progress"
+            )
+            with dpg.theme() as progress_theme:
+
+                with dpg.theme_component(
+                    dpg.mvProgressBar
+                ):
+
+                    dpg.add_theme_color(
+                        dpg.mvThemeCol_PlotHistogram,
+                        (0, 180, 255)
+                    )
+
+            dpg.bind_item_theme(
+                "progress",
+                progress_theme
             )
 
             dpg.add_text(
                 "0%",
                 tag="progress_text"
             )
+
+        # ----------------------
+        # ZONE PRINCIPALE
+        # ----------------------
 
         with dpg.child_window():
 
@@ -284,6 +349,12 @@ with dpg.window(
             dpg.add_child_window(
                 tag="task_container"
             )
+
+
+# ==========================
+# DEMARRAGE
+# ==========================
+
 tasks = load_tasks()
 
 rebuild_tasks()
