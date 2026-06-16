@@ -2,51 +2,45 @@ import dearpygui.dearpygui as dpg
 import random
 import os
 
-# ── Paleta ───────────────────────────────────────────────────────────────────
-BG_MAIN        = (238, 232, 218, 255)   # beige principal
-BG_CARD        = (250, 246, 238, 255)   # tarjeta tarea (mas claro)
-BG_CARD_DONE   = (228, 222, 210, 255)   # tarjeta completada (mas apagado)
-BG_CARD_PRIO   = (255, 248, 230, 255)   # tarjeta prioritaria (toque dorado)
-BG_HEADER      = (180, 120,  70, 255)   # cabecera terracota solida
-BG_INPUT       = (255, 252, 246, 255)
-ACCENT         = (180, 120,  70, 255)
-ACCENT_HOVER   = (200, 140,  90, 255)
-ACCENT_ACTIVE  = (155,  98,  52, 255)
-BTN_DEL        = (195,  85,  75, 255)
-BTN_DEL_HOV    = (215, 105,  95, 255)
-BTN_DEL_ACT    = (165,  65,  58, 255)
-BTN_RND        = ( 85, 138, 108, 255)
-BTN_RND_HOV    = (105, 158, 128, 255)
-BTN_RND_ACT    = ( 65, 118,  88, 255)
-BTN_CHK        = ( 72, 150,  88, 255)
-BTN_CHK_HOV    = ( 92, 170, 108, 255)
-BTN_CHK_ACT    = ( 52, 128,  68, 255)
-BTN_UNDO       = (148, 135, 118, 255)
-BTN_UNDO_HOV   = (168, 155, 138, 255)
-BTN_UNDO_ACT   = (128, 115,  98, 255)
-TEXT_WHITE     = (255, 255, 255, 255)
-TEXT_DARK      = ( 55,  42,  28, 255)
-TEXT_MID       = (118,  98,  72, 255)
-TEXT_DONE      = (155, 140, 120, 255)
-TEXT_PRIO      = (140,  88,  30, 255)
-BORDER_CARD    = (215, 202, 182, 255)
-BORDER_PRIO    = (210, 165,  60, 255)
-CHECK_GREEN    = ( 72, 150,  88, 255)
-STAR_GOLD      = (205, 155,  35, 255)
-SEPARATOR_CLR  = (210, 200, 182, 255)
+# ── Paleta beige/cálida ──────────────────────────────────────────────────────
+BG_MAIN       = (245, 240, 230, 255)
+BG_PANEL      = (235, 228, 215, 255)
+BG_INPUT      = (252, 248, 242, 255)
+ACCENT        = (180, 120,  70, 255)
+ACCENT_HOVER  = (200, 140,  90, 255)
+ACCENT_ACTIVE = (160, 100,  55, 255)
+BTN_DEL       = (190,  80,  70, 255)
+BTN_DEL_HOV   = (210, 100,  90, 255)
+BTN_DEL_ACT   = (160,  60,  55, 255)
+BTN_RND       = ( 90, 140, 110, 255)
+BTN_RND_HOV   = (110, 160, 130, 255)
+BTN_RND_ACT   = ( 70, 120,  90, 255)
+BTN_CHK       = ( 75, 155,  90, 255)   # verde (check)
+BTN_CHK_HOV   = ( 95, 175, 110, 255)
+BTN_CHK_ACT   = ( 55, 130,  70, 255)
+BTN_UNDO      = (120, 120, 120, 255)
+BTN_UNDO_HOV  = (140, 140, 140, 255)
+BTN_UNDO_ACT  = (100, 100, 100, 255)
+TEXT_DARK     = ( 60,  45,  30, 255)
+TEXT_MID      = (120, 100,  75, 255)
+TEXT_DONE     = (170, 155, 135, 255)
+BORDER        = (200, 185, 165, 255)
+CHECK_GREEN   = ( 80, 160, 100, 255)
+STAR_GOLD     = (210, 160,  40, 255)
 
-# ── Estado ───────────────────────────────────────────────────────────────────
+# ── Estado global ────────────────────────────────────────────────────────────
 tasks: list[dict] = []
 task_counter = 0
-font_large  = None
-font_medium = None
+font_large = None   # se asigna en main() si hay fuente disponible
 
-# ── Fuentes ──────────────────────────────────────────────────────────────────
+# ── Buscar fuente disponible en el sistema ────────────────────────────────────
 def find_fonts():
+    """Devuelve (ruta_normal, ruta_bold) o (None, None) si no hay ninguna."""
+    candidates = []
     if os.name == "nt":
         candidates = [
-            ("C:/Windows/Fonts/segoeui.ttf", "C:/Windows/Fonts/segoeuib.ttf"),
-            ("C:/Windows/Fonts/arial.ttf",    "C:/Windows/Fonts/arialbd.ttf"),
+            ("C:/Windows/Fonts/segoeui.ttf",  "C:/Windows/Fonts/segoeuib.ttf"),
+            ("C:/Windows/Fonts/arial.ttf",     "C:/Windows/Fonts/arialbd.ttf"),
         ]
     else:
         candidates = [
@@ -61,76 +55,72 @@ def find_fonts():
         ]
     for normal, bold in candidates:
         if os.path.exists(normal):
-            return normal, bold if os.path.exists(bold) else normal
+            bold_path = bold if os.path.exists(bold) else normal
+            return normal, bold_path
     return None, None
 
-# ── Temas ────────────────────────────────────────────────────────────────────
+# ── Helpers de tema ──────────────────────────────────────────────────────────
+
 def apply_theme():
     with dpg.theme() as global_theme:
         with dpg.theme_component(dpg.mvAll):
-            dpg.add_theme_color(dpg.mvThemeCol_WindowBg,       BG_MAIN)
-            dpg.add_theme_color(dpg.mvThemeCol_ChildBg,        BG_MAIN)
-            dpg.add_theme_color(dpg.mvThemeCol_FrameBg,        BG_INPUT)
-            dpg.add_theme_color(dpg.mvThemeCol_FrameBgHovered, (255, 253, 248, 255))
-            dpg.add_theme_color(dpg.mvThemeCol_FrameBgActive,  (245, 240, 230, 255))
-            dpg.add_theme_color(dpg.mvThemeCol_Text,           TEXT_DARK)
-            dpg.add_theme_color(dpg.mvThemeCol_Border,         BORDER_CARD)
-            dpg.add_theme_color(dpg.mvThemeCol_ScrollbarBg,    BG_MAIN)
-            dpg.add_theme_color(dpg.mvThemeCol_ScrollbarGrab,  BORDER_CARD)
-            dpg.add_theme_color(dpg.mvThemeCol_Button,         ACCENT)
-            dpg.add_theme_color(dpg.mvThemeCol_ButtonHovered,  ACCENT_HOVER)
-            dpg.add_theme_color(dpg.mvThemeCol_ButtonActive,   ACCENT_ACTIVE)
-            dpg.add_theme_style(dpg.mvStyleVar_WindowRounding, 0)
-            dpg.add_theme_style(dpg.mvStyleVar_FrameRounding,  6)
-            dpg.add_theme_style(dpg.mvStyleVar_ChildRounding,  8)
-            dpg.add_theme_style(dpg.mvStyleVar_FramePadding,   10, 7)
-            dpg.add_theme_style(dpg.mvStyleVar_ItemSpacing,    8, 5)
-            dpg.add_theme_style(dpg.mvStyleVar_WindowPadding,  0, 0)
-            dpg.add_theme_style(dpg.mvStyleVar_ScrollbarSize,  8)
+            dpg.add_theme_color(dpg.mvThemeCol_WindowBg,        BG_MAIN)
+            dpg.add_theme_color(dpg.mvThemeCol_ChildBg,         BG_PANEL)
+            dpg.add_theme_color(dpg.mvThemeCol_FrameBg,         BG_INPUT)
+            dpg.add_theme_color(dpg.mvThemeCol_FrameBgHovered,  (248, 244, 236, 255))
+            dpg.add_theme_color(dpg.mvThemeCol_FrameBgActive,   (240, 235, 225, 255))
+            dpg.add_theme_color(dpg.mvThemeCol_Text,            TEXT_DARK)
+            dpg.add_theme_color(dpg.mvThemeCol_Border,          BORDER)
+            dpg.add_theme_color(dpg.mvThemeCol_ScrollbarBg,     BG_PANEL)
+            dpg.add_theme_color(dpg.mvThemeCol_ScrollbarGrab,   BORDER)
+            dpg.add_theme_color(dpg.mvThemeCol_TitleBg,         BG_PANEL)
+            dpg.add_theme_color(dpg.mvThemeCol_TitleBgActive,   BG_PANEL)
+            dpg.add_theme_color(dpg.mvThemeCol_Button,          ACCENT)
+            dpg.add_theme_color(dpg.mvThemeCol_ButtonHovered,   ACCENT_HOVER)
+            dpg.add_theme_color(dpg.mvThemeCol_ButtonActive,    ACCENT_ACTIVE)
+            dpg.add_theme_style(dpg.mvStyleVar_WindowRounding,  10)
+            dpg.add_theme_style(dpg.mvStyleVar_FrameRounding,   8)
+            dpg.add_theme_style(dpg.mvStyleVar_ChildRounding,   8)
+            dpg.add_theme_style(dpg.mvStyleVar_GrabRounding,    6)
+            dpg.add_theme_style(dpg.mvStyleVar_FramePadding,    10, 8)
+            dpg.add_theme_style(dpg.mvStyleVar_ItemSpacing,     8, 6)
+            dpg.add_theme_style(dpg.mvStyleVar_WindowPadding,   18, 18)
+            dpg.add_theme_style(dpg.mvStyleVar_ScrollbarSize,   10)
     dpg.bind_theme(global_theme)
 
 
-def make_btn_theme(base, hover, active, radius=6):
+def make_btn_theme(base, hover, active):
     with dpg.theme() as t:
         with dpg.theme_component(dpg.mvButton):
             dpg.add_theme_color(dpg.mvThemeCol_Button,        base)
             dpg.add_theme_color(dpg.mvThemeCol_ButtonHovered, hover)
             dpg.add_theme_color(dpg.mvThemeCol_ButtonActive,  active)
-            dpg.add_theme_color(dpg.mvThemeCol_Text,          TEXT_WHITE)
-            dpg.add_theme_style(dpg.mvStyleVar_FrameRounding, radius)
-            dpg.add_theme_style(dpg.mvStyleVar_FramePadding,  4, 4)
+            dpg.add_theme_color(dpg.mvThemeCol_Text,          (255, 255, 255, 255))
+            dpg.add_theme_style(dpg.mvStyleVar_FrameRounding, 7)
     return t
 
 
-def make_card_theme(bg, border):
-    with dpg.theme() as t:
-        with dpg.theme_component(dpg.mvChildWindow):
-            dpg.add_theme_color(dpg.mvThemeCol_ChildBg, bg)
-            dpg.add_theme_color(dpg.mvThemeCol_Border,  border)
-            dpg.add_theme_style(dpg.mvStyleVar_ChildRounding,  8)
-            dpg.add_theme_style(dpg.mvStyleVar_WindowPadding,  10, 7)
-    return t
-
-
-def make_text_theme(color):
+def make_text_color_theme(color):
     with dpg.theme() as t:
         with dpg.theme_component(dpg.mvText):
             dpg.add_theme_color(dpg.mvThemeCol_Text, color)
     return t
 
 
-# ── Render ───────────────────────────────────────────────────────────────────
+# ── Renderizado ──────────────────────────────────────────────────────────────
+
 def render_tasks():
-    for child in dpg.get_item_children("task_list_group", slot=1) or []:
-        dpg.delete_item(child)
+    children = dpg.get_item_children("task_list_group", slot=1)
+    if children:
+        for child in children:
+            dpg.delete_item(child)
 
     if not tasks:
-        dpg.add_spacer(height=20, parent="task_list_group")
-        t = dpg.add_text(
-            "Sin tareas aun  —  escribe una arriba y pulsa Anadir",
+        dpg.add_text(
+            "No hay tareas — escribe una arriba y pulsa Añadir ✨",
             parent="task_list_group",
+            color=list(TEXT_MID),
         )
-        dpg.bind_item_theme(t, make_text_theme(TEXT_MID))
         update_counter()
         return
 
@@ -138,112 +128,86 @@ def render_tasks():
     completed = [t for t in tasks if t["done"]]
     ordered   = pending + completed
 
-    th_del      = make_btn_theme(BTN_DEL,  BTN_DEL_HOV,  BTN_DEL_ACT,  radius=14)
-    th_chk      = make_btn_theme(BTN_CHK,  BTN_CHK_HOV,  BTN_CHK_ACT,  radius=14)
-    th_undo     = make_btn_theme(BTN_UNDO, BTN_UNDO_HOV, BTN_UNDO_ACT, radius=6)
-    th_txt_done = make_text_theme(TEXT_DONE)
-    th_txt_dark = make_text_theme(TEXT_DARK)
-    th_txt_prio = make_text_theme(TEXT_PRIO)
+    theme_del        = make_btn_theme(BTN_DEL,  BTN_DEL_HOV,  BTN_DEL_ACT)
+    theme_cross      = make_btn_theme(BTN_CHK,  BTN_CHK_HOV,  BTN_CHK_ACT)
+    theme_undo       = make_btn_theme(BTN_UNDO, BTN_UNDO_HOV, BTN_UNDO_ACT)
+    theme_done_txt   = make_text_color_theme(TEXT_DONE)
+    theme_active_txt = make_text_color_theme(TEXT_DARK)
 
-    th_card_normal = make_card_theme(BG_CARD,      BORDER_CARD)
-    th_card_done   = make_card_theme(BG_CARD_DONE, BORDER_CARD)
-    th_card_prio   = make_card_theme(BG_CARD_PRIO, BORDER_PRIO)
-
-    shown_done_hdr = False
+    shown_done_header = False
 
     for task in ordered:
-
-        # Cabecera seccion completadas
-        if task["done"] and not shown_done_hdr and pending:
-            dpg.add_spacer(height=8, parent="task_list_group")
-            sep = dpg.add_text("  Completadas", parent="task_list_group")
-            dpg.bind_item_theme(sep, make_text_theme(TEXT_DONE))
+        if task["done"] and not shown_done_header and pending:
             dpg.add_spacer(height=4, parent="task_list_group")
-            shown_done_hdr = True
+            dpg.add_text("── Completadas ──", parent="task_list_group",
+                         color=list(TEXT_DONE))
+            dpg.add_spacer(height=2, parent="task_list_group")
+            shown_done_header = True
 
-        real_idx  = tasks.index(task)
-        card_tag  = f"card_{task['tag']}"
-        avail_w   = (dpg.get_item_width("task_scroll") or 760) - 20
+        real_idx = tasks.index(task)
+        row_tag  = f"row_{task['tag']}"
 
-        # Tarjeta (child_window actua como card con fondo propio)
-        with dpg.child_window(
-            tag=card_tag,
-            parent="task_list_group",
-            width=avail_w,
-            height=42,
-            border=True,
-            no_scrollbar=True,
-        ):
-            # Aplicar tema segun estado
+        with dpg.group(horizontal=True, parent="task_list_group", tag=row_tag):
+
+            # Boton check (verde) a la izquierda
             if task["done"]:
-                dpg.bind_item_theme(card_tag, th_card_done)
-            elif task.get("priority"):
-                dpg.bind_item_theme(card_tag, th_card_prio)
-            else:
-                dpg.bind_item_theme(card_tag, th_card_normal)
-
-            with dpg.group(horizontal=True):
-                # Boton check/desmarcar
-                if task["done"]:
-                    u_tag = f"undo_{task['tag']}"
-                    dpg.add_button(
-                        label=" Desmarcar ",
-                        tag=u_tag,
-                        callback=lambda s, a, u: toggle_done(u),
-                        user_data=real_idx,
-                        width=90, height=28,
-                    )
-                    dpg.bind_item_theme(u_tag, th_undo)
-                else:
-                    c_tag = f"chk_{task['tag']}"
-                    dpg.add_button(
-                        label=" v ",
-                        tag=c_tag,
-                        callback=lambda s, a, u: toggle_done(u),
-                        user_data=real_idx,
-                        width=32, height=28,
-                    )
-                    dpg.bind_item_theme(c_tag, th_chk)
-
-                dpg.add_spacer(width=3)
-
-                # Boton borrar circular pequeno
-                d_tag = f"del_{task['tag']}"
+                undo_tag = f"undo_{task['tag']}"
                 dpg.add_button(
-                    label=" x ",
-                    tag=d_tag,
-                    callback=lambda s, a, u: delete_task(u),
+                    label="Desmarcar",
+                    tag=undo_tag,
+                    callback=lambda s, a, u: toggle_done(u),
                     user_data=real_idx,
-                    width=28, height=28,
+                    width=90,
+                    height=26,
                 )
-                dpg.bind_item_theme(d_tag, th_del)
+                dpg.bind_item_theme(undo_tag, theme_undo)
+            else:
+                cross_tag = f"chk_{task['tag']}"
+                dpg.add_button(
+                    label=" v ",
+                    tag=cross_tag,
+                    callback=lambda s, a, u: toggle_done(u),
+                    user_data=real_idx,
+                    width=36,
+                    height=26,
+                )
+                dpg.bind_item_theme(cross_tag, theme_cross)
 
-                dpg.add_spacer(width=10)
+            dpg.add_spacer(width=3)
 
-                # Icono de estado
-                if task["done"]:
-                    ico = dpg.add_text("(ok)")
-                    dpg.bind_item_theme(ico, make_text_theme(CHECK_GREEN))
-                elif task.get("priority"):
-                    ico = dpg.add_text("(!) ")
-                    dpg.bind_item_theme(ico, make_text_theme(STAR_GOLD))
-                else:
-                    ico = dpg.add_text("  o ")
-                    dpg.bind_item_theme(ico, make_text_theme(TEXT_MID))
+            # Boton borrar pequeno a la izquierda
+            del_tag = f"del_{task['tag']}"
+            dpg.add_button(
+                label="x",
+                tag=del_tag,
+                callback=lambda s, a, u: delete_task(u),
+                user_data=real_idx,
+                width=26,
+                height=26,
+            )
+            dpg.bind_item_theme(del_tag, theme_del)
 
-                dpg.add_spacer(width=4)
+            dpg.add_spacer(width=8)
 
-                # Texto tarea
-                t_tag = f"txt_{task['tag']}"
-                dpg.add_text(task["text"], tag=t_tag)
-                if task["done"]:
-                    dpg.bind_item_theme(t_tag, th_txt_done)
-                elif task.get("priority"):
-                    dpg.bind_item_theme(t_tag, th_txt_prio)
-                else:
-                    dpg.bind_item_theme(t_tag, th_txt_dark)
+            # Icono de estado
+            if task["done"]:
+                dpg.add_text("v", color=list(CHECK_GREEN))
+            elif task.get("priority"):
+                dpg.add_text("*", color=list(STAR_GOLD))
+            else:
+                dpg.add_text("o", color=list(TEXT_MID))
 
-        dpg.add_spacer(height=5, parent="task_list_group")
+            dpg.add_spacer(width=5)
+
+            # Texto
+            t_tag = f"txt_{task['tag']}"
+            dpg.add_text(task["text"], tag=t_tag)
+            if task["done"]:
+                dpg.bind_item_theme(t_tag, theme_done_txt)
+            else:
+                dpg.bind_item_theme(t_tag, theme_active_txt)
+
+        dpg.add_separator(parent="task_list_group")
 
     update_counter()
 
@@ -254,11 +218,12 @@ def update_counter():
     pending = total - done
     dpg.set_value(
         "counter_text",
-        f"  {total} tareas      {done} hechas      {pending} pendientes",
+        f"  {total} tareas    {done} hechas    {pending} pendientes",
     )
 
 
 # ── Callbacks ────────────────────────────────────────────────────────────────
+
 def add_task(sender=None, app_data=None, user_data=None):
     global task_counter
     raw = dpg.get_value("input_task").strip()
@@ -279,7 +244,7 @@ def delete_task(idx: int):
 
 def toggle_done(idx: int):
     if 0 <= idx < len(tasks):
-        tasks[idx]["done"]     = not tasks[idx]["done"]
+        tasks[idx]["done"] = not tasks[idx]["done"]
         tasks[idx]["priority"] = False
         render_tasks()
 
@@ -290,6 +255,7 @@ def delete_done(sender=None, app_data=None, user_data=None):
 
 
 def promote_random(sender=None, app_data=None, user_data=None):
+    """Toma una tarea pendiente al azar y la sube al primer puesto con prioridad."""
     pending = [t for t in tasks if not t["done"]]
     if not pending:
         return
@@ -303,6 +269,7 @@ def promote_random(sender=None, app_data=None, user_data=None):
 
 
 # ── UI ───────────────────────────────────────────────────────────────────────
+
 def build_ui():
     with dpg.window(
         tag="main_win",
@@ -312,105 +279,74 @@ def build_ui():
         no_scrollbar=True,
         no_scroll_with_mouse=True,
     ):
-        # ── Cabecera de color solido ──────────────────────────────────────────
-        with dpg.child_window(height=70, border=False, tag="header"):
-            with dpg.theme() as hdr_theme:
-                with dpg.theme_component(dpg.mvChildWindow):
-                    dpg.add_theme_color(dpg.mvThemeCol_ChildBg, BG_HEADER)
-                    dpg.add_theme_style(dpg.mvStyleVar_WindowPadding, 20, 12)
-            dpg.bind_item_theme("header", hdr_theme)
+        # Cabecera
+        with dpg.child_window(height=72, border=False, tag="header"):
+            dpg.add_spacer(height=4)
+            title_item = dpg.add_text("Todo Stage", color=list(ACCENT))
+            if font_large is not None:
+                dpg.bind_item_font(title_item, font_large)
+            dpg.add_text("Organiza tu dia, una tarea a la vez.", color=list(TEXT_MID))
 
-            title = dpg.add_text("Todo Stage")
-            with dpg.theme() as t_title:
-                with dpg.theme_component(dpg.mvText):
-                    dpg.add_theme_color(dpg.mvThemeCol_Text, TEXT_WHITE)
-            dpg.bind_item_theme(title, t_title)
-            if font_large:
-                dpg.bind_item_font(title, font_large)
+        dpg.add_spacer(height=8)
 
-            sub = dpg.add_text("Organiza tu dia, una tarea a la vez.")
-            with dpg.theme() as t_sub:
-                with dpg.theme_component(dpg.mvText):
-                    dpg.add_theme_color(dpg.mvThemeCol_Text, (255, 235, 210, 200))
-            dpg.bind_item_theme(sub, t_sub)
-
-        # ── Cuerpo con padding ────────────────────────────────────────────────
-        with dpg.child_window(border=False, autosize_y=True, no_scrollbar=True):
-            with dpg.theme() as body_theme:
-                with dpg.theme_component(dpg.mvChildWindow):
-                    dpg.add_theme_color(dpg.mvThemeCol_ChildBg, BG_MAIN)
-                    dpg.add_theme_style(dpg.mvStyleVar_WindowPadding, 18, 14)
-            dpg.bind_item_theme(dpg.last_item(), body_theme)
-
-            # Campo de entrada
-            with dpg.group(horizontal=True):
-                dpg.add_input_text(
-                    tag="input_task",
-                    hint="Nueva tarea...",
-                    width=-155,
-                    height=36,
-                    on_enter=True,
-                    callback=add_task,
-                )
-                dpg.add_spacer(width=6)
-                dpg.add_button(
-                    label="+ Anadir",
-                    callback=add_task,
-                    width=142, height=36,
-                )
-
-            dpg.add_spacer(height=8)
-
-            # Botones secundarios
-            th_del = make_btn_theme(BTN_DEL, BTN_DEL_HOV, BTN_DEL_ACT)
-            th_rnd = make_btn_theme(BTN_RND, BTN_RND_HOV, BTN_RND_ACT)
-
-            with dpg.group(horizontal=True):
-                b1 = dpg.add_button(
-                    label="  Prioridad aleatoria",
-                    callback=promote_random,
-                    width=196, height=30,
-                )
-                dpg.bind_item_theme(b1, th_rnd)
-                dpg.add_spacer(width=8)
-                b2 = dpg.add_button(
-                    label="  Borrar completadas",
-                    callback=delete_done,
-                    width=190, height=30,
-                )
-                dpg.bind_item_theme(b2, th_del)
-
-            dpg.add_spacer(height=10)
-
-            # Contador
-            ctr = dpg.add_text(
-                "  0 tareas      0 hechas      0 pendientes",
-                tag="counter_text",
+        # Entrada
+        with dpg.group(horizontal=True):
+            dpg.add_input_text(
+                tag="input_task",
+                hint="Escribe una nueva tarea...",
+                width=-160,
+                on_enter=True,
+                callback=add_task,
             )
-            dpg.bind_item_theme(ctr, make_text_theme(TEXT_MID))
+            dpg.add_spacer(width=6)
+            dpg.add_button(label="+ Anadir", callback=add_task, width=148, height=36)
 
-            dpg.add_spacer(height=8)
+        dpg.add_spacer(height=6)
 
-            # Lista scrollable
-            with dpg.child_window(
-                tag="task_scroll",
-                border=False,
-                autosize_y=True,
-            ):
-                with dpg.theme() as scroll_theme:
-                    with dpg.theme_component(dpg.mvChildWindow):
-                        dpg.add_theme_color(dpg.mvThemeCol_ChildBg, BG_MAIN)
-                        dpg.add_theme_style(dpg.mvStyleVar_WindowPadding, 2, 4)
-                dpg.bind_item_theme("task_scroll", scroll_theme)
+        # Botones secundarios
+        theme_del = make_btn_theme(BTN_DEL, BTN_DEL_HOV, BTN_DEL_ACT)
+        theme_rnd = make_btn_theme(BTN_RND, BTN_RND_HOV, BTN_RND_ACT)
 
-                with dpg.group(tag="task_list_group"):
-                    dpg.add_text(
-                        "Sin tareas aun  —  escribe una arriba y pulsa Anadir",
-                        color=list(TEXT_MID),
-                    )
+        with dpg.group(horizontal=True):
+            btn_rnd = dpg.add_button(
+                label="[?] Prioridad aleatoria",
+                callback=promote_random,
+                width=200,
+                height=32,
+            )
+            dpg.bind_item_theme(btn_rnd, theme_rnd)
+
+            dpg.add_spacer(width=8)
+
+            btn_clr = dpg.add_button(
+                label="[x] Borrar completadas",
+                callback=delete_done,
+                width=195,
+                height=32,
+            )
+            dpg.bind_item_theme(btn_clr, theme_del)
+
+        dpg.add_spacer(height=10)
+        dpg.add_separator()
+        dpg.add_spacer(height=6)
+
+        dpg.add_text(
+            "  0 tareas    0 hechas    0 pendientes",
+            tag="counter_text",
+            color=list(TEXT_MID),
+        )
+        dpg.add_spacer(height=8)
+
+        with dpg.child_window(tag="task_scroll", border=True, autosize_y=True):
+            with dpg.group(tag="task_list_group"):
+                dpg.add_text(
+                    "No hay tareas - escribe una arriba y pulsa Anadir",
+                    color=list(TEXT_MID),
+                )
 
 
 # ── Main ─────────────────────────────────────────────────────────────────────
+
 def main():
     global font_large
 
@@ -418,20 +354,23 @@ def main():
     apply_theme()
 
     font_normal_path, font_bold_path = find_fonts()
+
     with dpg.font_registry():
         if font_normal_path:
             try:
-                dpg.add_font(font_normal_path, 15, default_font=True)
+                dpg.add_font(font_normal_path, 16, default_font=True)
                 font_large = dpg.add_font(font_bold_path, 22)
+                print(f"Fuente cargada: {font_normal_path}")
             except Exception as e:
-                print(f"Fuente no cargada: {e}")
+                print(f"No se pudo cargar la fuente: {e}")
                 font_large = None
         else:
+            print("Usando fuente interna de DearPyGui")
             font_large = None
 
     build_ui()
 
-    W, H = 780, 620
+    W, H = 820, 640
     dpg.create_viewport(title="Todo Stage", width=W, height=H, resizable=False)
     dpg.set_viewport_clear_color(list(BG_MAIN))
     dpg.setup_dearpygui()
