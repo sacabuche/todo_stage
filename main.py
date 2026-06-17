@@ -1,7 +1,6 @@
 import dearpygui.dearpygui as dpg
 import random
 import os
-import math
 
 # ── Paleta ───────────────────────────────────────────────────────────────────
 BG_MAIN        = (240, 235, 225, 255)
@@ -39,85 +38,82 @@ BORDER_CARD    = (215, 202, 182, 255)
 BORDER_PRIO    = (210, 162,  55, 255)
 CHECK_GREEN    = ( 70, 148,  86, 255)
 STAR_GOLD      = (202, 152,  32, 255)
+ACCENT_TEXT    = (180, 120,  70, 255)
+PROGRESS_BAR   = (180, 120,  70, 255)
 
-# ── Constantes de layout ──────────────────────────────────────────────────────
-# Ancho total de la ventana
-WIN_W         = 800
-# Espacio ocupado a la izquierda del texto:
-#   padding_card(10) + btn_chk/undo(~92) + spacer(3) + btn_del(28) + spacer(10) + icono(~28) + spacer(4) + padding_card(10)
-TEXT_OFFSET_PX = 185   # píxeles ocupados antes del texto en la tarjeta
-# Padding lateral del body (18 cada lado) + scrollbar (10) + border card (2*1)
-BODY_PADDING_PX = 52
-# Ancho disponible para el texto en píxeles
-TEXT_WRAP_PX  = WIN_W - BODY_PADDING_PX - TEXT_OFFSET_PX   # ~563 px
-
-# Altura de texto a 15px con interlineado DearPyGui (~19 px por linea)
-LINE_H        = 19
-# Altura base de tarjeta (padding vertical 8*2 + boton 28 + margen)
-CARD_BASE_H   = 46
-# Anchura de caracteres promedio a 15px ≈ 8.5 px/char
-CHAR_W        = 8.5
+# ── Constantes de layout ─────────────────────────────────────────────────────
+WIN_W           = 820
+WIN_H           = 660
+# Espacio a la izquierda del texto dentro de la tarjeta (en px):
+#   padding(10) + btn_chk(32)/btn_undo(92) + spacer(3) + btn_del(28)
+#   + spacer(10) + icono(16) + spacer(4) + padding(10) + combo(130) + spacer(10)
+TEXT_OFFSET_PX  = 310
+BODY_PADDING_PX = 54
+TEXT_WRAP_PX    = WIN_W - BODY_PADDING_PX - TEXT_OFFSET_PX   # ~456 px
+LINE_H          = 19
+CARD_BASE_H     = 46
+CHAR_W          = 8.5
 
 # ── Traducciones ─────────────────────────────────────────────────────────────
 LANGS = {
     "ES": {
         "title":         "Todo Stage",
         "subtitle":      "Organiza tu dia, una tarea a la vez.",
-        "placeholder":   "Nueva tarea...",
+        "hint_task":     "Nueva tarea...",
+        "hint_group":    "Proyecto...",
         "btn_add":       "+ Anadir",
         "btn_random":    "  Prioridad aleatoria",
         "btn_del_done":  "  Borrar completadas",
         "counter":       "{total} tareas    {done} hechas    {pending} pendientes",
+        "progress":      "{pct}% completado",
         "empty":         "Sin tareas aun  --  escribe una arriba y pulsa Anadir",
-        "done_section":  "  Completadas",
-        "btn_uncheck":   " Desmarcar ",
-        "btn_check":     "  v  ",
+        "no_group":      "Sin proyecto",
+        "done_section":  "Completadas",
+        "btn_uncheck":   "Desmarcar",
+        "btn_check":     " v ",
         "btn_del_card":  " x ",
-        "icon_done":     "(ok)",
-        "icon_prio":     "(!)",
-        "icon_normal":   "  o  ",
     },
     "FR": {
         "title":         "Todo Stage",
         "subtitle":      "Organisez votre journee, une tache a la fois.",
-        "placeholder":   "Nouvelle tache...",
+        "hint_task":     "Nouvelle tache...",
+        "hint_group":    "Projet...",
         "btn_add":       "+ Ajouter",
         "btn_random":    "  Priorite aleatoire",
         "btn_del_done":  "  Effacer terminees",
         "counter":       "{total} taches    {done} faites    {pending} en attente",
-        "empty":         "Aucune tache  --  ecrivez ci-dessus et cliquez sur Ajouter",
-        "done_section":  "  Terminees",
-        "btn_uncheck":   " Decocher ",
-        "btn_check":     "  v  ",
+        "progress":      "{pct}% complete",
+        "empty":         "Aucune tache  --  ecrivez ci-dessus et cliquez Ajouter",
+        "no_group":      "Sans projet",
+        "done_section":  "Terminees",
+        "btn_uncheck":   "Decocher",
+        "btn_check":     " v ",
         "btn_del_card":  " x ",
-        "icon_done":     "(ok)",
-        "icon_prio":     "(!)",
-        "icon_normal":   "  o  ",
     },
     "EN": {
         "title":         "Todo Stage",
         "subtitle":      "Organize your day, one task at a time.",
-        "placeholder":   "New task...",
+        "hint_task":     "New task...",
+        "hint_group":    "Project...",
         "btn_add":       "+ Add",
         "btn_random":    "  Random priority",
         "btn_del_done":  "  Clear completed",
         "counter":       "{total} tasks    {done} done    {pending} pending",
+        "progress":      "{pct}% complete",
         "empty":         "No tasks yet  --  type one above and click Add",
-        "done_section":  "  Completed",
-        "btn_uncheck":   " Uncheck ",
-        "btn_check":     "  v  ",
+        "no_group":      "No project",
+        "done_section":  "Completed",
+        "btn_uncheck":   "Uncheck",
+        "btn_check":     " v ",
         "btn_del_card":  " x ",
-        "icon_done":     "(ok)",
-        "icon_prio":     "(!)",
-        "icon_normal":   "  o  ",
     },
 }
 
 # ── Estado ───────────────────────────────────────────────────────────────────
 tasks: list[dict] = []
-task_counter  = 0
-current_lang  = "ES"
-font_large    = None
+task_counter = 0
+current_lang = "ES"
+font_large   = None
 
 
 # ── Fuentes ──────────────────────────────────────────────────────────────────
@@ -165,6 +161,10 @@ def apply_theme():
             dpg.add_theme_color(dpg.mvThemeCol_Button,         ACCENT)
             dpg.add_theme_color(dpg.mvThemeCol_ButtonHovered,  ACCENT_HOVER)
             dpg.add_theme_color(dpg.mvThemeCol_ButtonActive,   ACCENT_ACTIVE)
+            dpg.add_theme_color(dpg.mvThemeCol_Header,         (*ACCENT[:3], 120))
+            dpg.add_theme_color(dpg.mvThemeCol_HeaderHovered,  (*ACCENT_HOVER[:3], 150))
+            dpg.add_theme_color(dpg.mvThemeCol_PopupBg,        BG_CARD)
+            dpg.add_theme_color(dpg.mvThemeCol_PlotHistogram,  PROGRESS_BAR)
             dpg.add_theme_style(dpg.mvStyleVar_WindowRounding, 0)
             dpg.add_theme_style(dpg.mvStyleVar_FrameRounding,  7)
             dpg.add_theme_style(dpg.mvStyleVar_ChildRounding,  9)
@@ -172,6 +172,7 @@ def apply_theme():
             dpg.add_theme_style(dpg.mvStyleVar_ItemSpacing,    8, 5)
             dpg.add_theme_style(dpg.mvStyleVar_WindowPadding,  0, 0)
             dpg.add_theme_style(dpg.mvStyleVar_ScrollbarSize,  8)
+            dpg.add_theme_style(dpg.mvStyleVar_GrabRounding,   4)
     dpg.bind_theme(global_theme)
 
 
@@ -183,7 +184,7 @@ def make_btn_theme(base, hover, active, radius=7):
             dpg.add_theme_color(dpg.mvThemeCol_ButtonActive,  active)
             dpg.add_theme_color(dpg.mvThemeCol_Text,          TEXT_WHITE)
             dpg.add_theme_style(dpg.mvStyleVar_FrameRounding, radius)
-            dpg.add_theme_style(dpg.mvStyleVar_FramePadding,  5, 5)
+            dpg.add_theme_style(dpg.mvStyleVar_FramePadding,  5, 4)
     return t
 
 
@@ -206,36 +207,32 @@ def make_text_theme(color):
 
 # ── Calculo de altura de tarjeta ─────────────────────────────────────────────
 def estimate_card_height(text: str) -> int:
-    """
-    Estima cuantas lineas ocupara el texto usando el ancho de wrap en pixeles,
-    y devuelve la altura total de la tarjeta.
-    DearPyGui usa wrap= en pixeles para cortar lineas automaticamente.
-    Aproximamos cuantos caracteres caben en TEXT_WRAP_PX px a CHAR_W px/char.
-    """
+    """Calcula cuantas lineas necesita el texto y devuelve la altura de la tarjeta."""
     chars_per_line = max(1, int(TEXT_WRAP_PX / CHAR_W))
-    # Contar lineas manualmente para estimar (solo para la altura)
-    words = text.split()
-    lines = 1
-    current_len = 0
+    words   = text.split()
+    lines   = 1
+    cur_len = 0
     for word in words:
-        wlen = len(word)
-        if current_len == 0:
-            current_len = wlen
-        elif current_len + 1 + wlen <= chars_per_line:
-            current_len += 1 + wlen
+        wl = len(word)
+        if cur_len == 0:
+            cur_len = wl
+        elif cur_len + 1 + wl <= chars_per_line:
+            cur_len += 1 + wl
         else:
             lines += 1
-            current_len = wlen
-    extra = max(0, lines - 1) * LINE_H
-    return CARD_BASE_H + extra
+            cur_len = wl
+    return CARD_BASE_H + max(0, lines - 1) * LINE_H
 
 
-# ── Contador ──────────────────────────────────────────────────────────────────
+# ── Contador y barra de progreso ─────────────────────────────────────────────
 def update_counter():
     total   = len(tasks)
     done    = sum(1 for t in tasks if t["done"])
     pending = total - done
-    dpg.set_value("counter_text", T("counter", total=total, done=done, pending=pending))
+    pct     = int(done / total * 100) if total else 0
+    dpg.set_value("counter_text",  T("counter",  total=total, done=done, pending=pending))
+    dpg.set_value("progress_bar",  done / total if total else 0.0)
+    dpg.set_value("progress_text", T("progress", pct=pct))
 
 
 # ── Render ────────────────────────────────────────────────────────────────────
@@ -250,13 +247,10 @@ def render_tasks():
         update_counter()
         return
 
-    pending   = [t for t in tasks if not t["done"]]
-    completed = [t for t in tasks if t["done"]]
-    ordered   = pending + completed
-
-    th_del   = make_btn_theme(BTN_DEL,  BTN_DEL_HOV,  BTN_DEL_ACT,  radius=16)
-    th_chk   = make_btn_theme(BTN_CHK,  BTN_CHK_HOV,  BTN_CHK_ACT,  radius=16)
-    th_undo  = make_btn_theme(BTN_UNDO, BTN_UNDO_HOV, BTN_UNDO_ACT, radius=7)
+    # Temas reutilizables
+    th_del  = make_btn_theme(BTN_DEL,  BTN_DEL_HOV,  BTN_DEL_ACT,  radius=16)
+    th_chk  = make_btn_theme(BTN_CHK,  BTN_CHK_HOV,  BTN_CHK_ACT,  radius=16)
+    th_undo = make_btn_theme(BTN_UNDO, BTN_UNDO_HOV, BTN_UNDO_ACT, radius=7)
 
     th_txt_done = make_text_theme(TEXT_DONE)
     th_txt_dark = make_text_theme(TEXT_DARK)
@@ -266,104 +260,142 @@ def render_tasks():
     th_card_done   = make_card_theme(BG_CARD_DONE, BORDER_CARD)
     th_card_prio   = make_card_theme(BG_CARD_PRIO, BORDER_PRIO)
 
-    shown_done_hdr = False
+    no_group_label = T("no_group")
 
-    for task in ordered:
+    # Agrupar tareas: pendientes primero, completadas al final dentro de c/grupo
+    groups: dict[str, list[dict]] = {}
+    for task in tasks:
+        g = task.get("group", "").strip() or no_group_label
+        groups.setdefault(g, []).append(task)
 
-        # Cabecera de seccion completadas
-        if task["done"] and not shown_done_hdr and pending:
-            dpg.add_spacer(height=8, parent="task_list_group")
-            sep = dpg.add_text(T("done_section"), parent="task_list_group")
-            dpg.bind_item_theme(sep, make_text_theme(TEXT_DONE))
-            dpg.add_spacer(height=4, parent="task_list_group")
-            shown_done_hdr = True
+    # Obtener lista de todos los proyectos (para el combo)
+    all_groups = sorted(groups.keys())
 
-        real_idx = tasks.index(task)
-        card_tag = f"card_{task['tag']}"
-        avail_w  = (dpg.get_item_width("task_scroll") or WIN_W) - 22
-        h        = estimate_card_height(task["text"])
+    for group_name, group_tasks in groups.items():
 
-        # Tarjeta
-        with dpg.child_window(
-            tag=card_tag,
-            parent="task_list_group",
-            width=avail_w,
-            height=h,
-            border=True,
-            no_scrollbar=True,
-        ):
-            if task["done"]:
-                dpg.bind_item_theme(card_tag, th_card_done)
-            elif task.get("priority"):
-                dpg.bind_item_theme(card_tag, th_card_prio)
-            else:
-                dpg.bind_item_theme(card_tag, th_card_normal)
+        # Cabecera de grupo
+        dpg.add_spacer(height=8, parent="task_list_group")
+        grp_hdr = dpg.add_text(f"[ {group_name} ]", parent="task_list_group")
+        dpg.bind_item_theme(grp_hdr, make_text_theme(ACCENT_TEXT))
+        dpg.add_spacer(height=4, parent="task_list_group")
 
-            with dpg.group(horizontal=True):
+        # Ordenar dentro del grupo: pendientes > prioritarias > completadas
+        ordered = (
+            [t for t in group_tasks if not t["done"] and t.get("priority")] +
+            [t for t in group_tasks if not t["done"] and not t.get("priority")] +
+            [t for t in group_tasks if t["done"]]
+        )
 
-                # Boton check / desmarcar
-                if task["done"]:
-                    u_tag = f"undo_{task['tag']}"
-                    dpg.add_button(
-                        label=T("btn_uncheck"),
-                        tag=u_tag,
-                        callback=lambda s, a, u: toggle_done(u),
-                        user_data=real_idx,
-                        width=92, height=28,
+        shown_done_hdr = False
+
+        for task in ordered:
+
+            # Separador de completadas dentro del grupo
+            if task["done"] and not shown_done_hdr:
+                pending_in_grp = [t for t in ordered if not t["done"]]
+                if pending_in_grp:
+                    sep = dpg.add_text(
+                        f"  -- {T('done_section')} --",
+                        parent="task_list_group"
                     )
-                    dpg.bind_item_theme(u_tag, th_undo)
+                    dpg.bind_item_theme(sep, make_text_theme(TEXT_DONE))
+                    dpg.add_spacer(height=2, parent="task_list_group")
+                shown_done_hdr = True
+
+            real_idx = tasks.index(task)
+            card_tag = f"card_{task['tag']}"
+            avail_w  = (dpg.get_item_width("task_scroll") or WIN_W) - 22
+            h        = estimate_card_height(task["text"])
+
+            with dpg.child_window(
+                tag=card_tag,
+                parent="task_list_group",
+                width=avail_w,
+                height=h,
+                border=True,
+                no_scrollbar=True,
+            ):
+                if task["done"]:
+                    dpg.bind_item_theme(card_tag, th_card_done)
+                elif task.get("priority"):
+                    dpg.bind_item_theme(card_tag, th_card_prio)
                 else:
-                    c_tag = f"chk_{task['tag']}"
+                    dpg.bind_item_theme(card_tag, th_card_normal)
+
+                with dpg.group(horizontal=True):
+
+                    # Boton check / desmarcar
+                    if task["done"]:
+                        u_tag = f"undo_{task['tag']}"
+                        dpg.add_button(
+                            label=T("btn_uncheck"),
+                            tag=u_tag,
+                            callback=lambda s, a, u: toggle_done(u),
+                            user_data=real_idx,
+                            width=84, height=28,
+                        )
+                        dpg.bind_item_theme(u_tag, th_undo)
+                    else:
+                        c_tag = f"chk_{task['tag']}"
+                        dpg.add_button(
+                            label=T("btn_check"),
+                            tag=c_tag,
+                            callback=lambda s, a, u: toggle_done(u),
+                            user_data=real_idx,
+                            width=32, height=28,
+                        )
+                        dpg.bind_item_theme(c_tag, th_chk)
+
+                    dpg.add_spacer(width=3)
+
+                    # Boton borrar
+                    d_tag = f"del_{task['tag']}"
                     dpg.add_button(
-                        label=T("btn_check"),
-                        tag=c_tag,
-                        callback=lambda s, a, u: toggle_done(u),
+                        label=T("btn_del_card"),
+                        tag=d_tag,
+                        callback=lambda s, a, u: delete_task(u),
                         user_data=real_idx,
-                        width=32, height=28,
+                        width=28, height=28,
                     )
-                    dpg.bind_item_theme(c_tag, th_chk)
+                    dpg.bind_item_theme(d_tag, th_del)
 
-                dpg.add_spacer(width=3)
+                    dpg.add_spacer(width=8)
 
-                # Boton borrar
-                d_tag = f"del_{task['tag']}"
-                dpg.add_button(
-                    label=T("btn_del_card"),
-                    tag=d_tag,
-                    callback=lambda s, a, u: delete_task(u),
-                    user_data=real_idx,
-                    width=28, height=28,
-                )
-                dpg.bind_item_theme(d_tag, th_del)
+                    # Combo de proyecto
+                    dpg.add_combo(
+                        items=all_groups,
+                        default_value=task.get("group", "").strip() or no_group_label,
+                        width=120,
+                        callback=lambda s, a, u: move_task(u, a),
+                        user_data=real_idx,
+                    )
 
-                dpg.add_spacer(width=10)
+                    dpg.add_spacer(width=8)
 
-                # Icono de estado
-                if task["done"]:
-                    ico = dpg.add_text(T("icon_done"))
-                    dpg.bind_item_theme(ico, make_text_theme(CHECK_GREEN))
-                elif task.get("priority"):
-                    ico = dpg.add_text(T("icon_prio"))
-                    dpg.bind_item_theme(ico, make_text_theme(STAR_GOLD))
-                else:
-                    ico = dpg.add_text(T("icon_normal"))
-                    dpg.bind_item_theme(ico, make_text_theme(TEXT_MID))
+                    # Icono de estado
+                    if task["done"]:
+                        ico = dpg.add_text("(ok)")
+                        dpg.bind_item_theme(ico, make_text_theme(CHECK_GREEN))
+                    elif task.get("priority"):
+                        ico = dpg.add_text("(!)")
+                        dpg.bind_item_theme(ico, make_text_theme(STAR_GOLD))
+                    else:
+                        ico = dpg.add_text("  o ")
+                        dpg.bind_item_theme(ico, make_text_theme(TEXT_MID))
 
-                dpg.add_spacer(width=4)
+                    dpg.add_spacer(width=4)
 
-                # ── Texto con wrap nativo en pixeles ──────────────────────────
-                # wrap=TEXT_WRAP_PX le dice a DearPyGui exactamente cuantos
-                # pixeles de ancho tiene el texto antes de saltar de linea.
-                t_tag = f"txt_{task['tag']}"
-                dpg.add_text(task["text"], tag=t_tag, wrap=TEXT_WRAP_PX)
-                if task["done"]:
-                    dpg.bind_item_theme(t_tag, th_txt_done)
-                elif task.get("priority"):
-                    dpg.bind_item_theme(t_tag, th_txt_prio)
-                else:
-                    dpg.bind_item_theme(t_tag, th_txt_dark)
+                    # Texto con wrap nativo en pixeles
+                    t_tag = f"txt_{task['tag']}"
+                    dpg.add_text(task["text"], tag=t_tag, wrap=TEXT_WRAP_PX)
+                    if task["done"]:
+                        dpg.bind_item_theme(t_tag, th_txt_done)
+                    elif task.get("priority"):
+                        dpg.bind_item_theme(t_tag, th_txt_prio)
+                    else:
+                        dpg.bind_item_theme(t_tag, th_txt_dark)
 
-        dpg.add_spacer(height=5, parent="task_list_group")
+            dpg.add_spacer(height=5, parent="task_list_group")
 
     update_counter()
 
@@ -371,13 +403,20 @@ def render_tasks():
 # ── Callbacks ─────────────────────────────────────────────────────────────────
 def add_task(sender=None, app_data=None, user_data=None):
     global task_counter
-    raw = dpg.get_value("input_task").strip()
+    raw   = dpg.get_value("input_task").strip()
+    group = dpg.get_value("group_input").strip()
     if not raw:
         return
     task_counter += 1
-    tasks.append({"text": raw, "done": False, "priority": False,
-                  "tag": f"t{task_counter}"})
-    dpg.set_value("input_task", "")
+    tasks.append({
+        "text":     raw,
+        "group":    group,
+        "done":     False,
+        "priority": False,
+        "tag":      f"t{task_counter}",
+    })
+    dpg.set_value("input_task",  "")
+    dpg.set_value("group_input", "")
     render_tasks()
 
 
@@ -391,6 +430,13 @@ def toggle_done(idx: int):
     if 0 <= idx < len(tasks):
         tasks[idx]["done"]     = not tasks[idx]["done"]
         tasks[idx]["priority"] = False
+        render_tasks()
+
+
+def move_task(idx: int, new_group: str):
+    if 0 <= idx < len(tasks):
+        no_group_label = T("no_group")
+        tasks[idx]["group"] = "" if new_group == no_group_label else new_group
         render_tasks()
 
 
@@ -414,27 +460,26 @@ def promote_random(sender=None, app_data=None, user_data=None):
 
 def change_lang(sender=None, app_data=None, user_data=None):
     global current_lang
-    new_lang = user_data
-    if new_lang == current_lang:
+    if user_data == current_lang:
         return
-    current_lang = new_lang
+    current_lang = user_data
     rebuild_ui()
 
 
-# ── Rebuild de UI (para cambio de idioma) ─────────────────────────────────────
+# ── Rebuild UI ────────────────────────────────────────────────────────────────
 def rebuild_ui():
     if dpg.does_item_exist("main_win"):
         dpg.delete_item("main_win")
     build_ui()
-    dpg.set_item_width("main_win",  WIN_W)
-    dpg.set_item_height("main_win", 640)
-    dpg.set_item_pos("main_win",  [0, 0])
+    dpg.set_item_width( "main_win", WIN_W)
+    dpg.set_item_height("main_win", WIN_H)
+    dpg.set_item_pos(   "main_win", [0, 0])
 
 
 # ── UI ────────────────────────────────────────────────────────────────────────
 def build_ui():
-    th_del      = make_btn_theme(BTN_DEL,  BTN_DEL_HOV,  BTN_DEL_ACT)
-    th_rnd      = make_btn_theme(BTN_RND,  BTN_RND_HOV,  BTN_RND_ACT)
+    th_del      = make_btn_theme(BTN_DEL,      BTN_DEL_HOV,  BTN_DEL_ACT)
+    th_rnd      = make_btn_theme(BTN_RND,      BTN_RND_HOV,  BTN_RND_ACT)
     th_lang     = make_btn_theme(BTN_LANG,     BTN_LANG_HOV, BTN_LANG_ACT, radius=5)
     th_lang_sel = make_btn_theme(BTN_LANG_SEL, BTN_LANG_HOV, BTN_LANG_ACT, radius=5)
 
@@ -471,15 +516,16 @@ def build_ui():
                             dpg.add_theme_color(dpg.mvThemeCol_Text, TEXT_HEADER)
                     dpg.bind_item_theme(sub, t_sub)
 
-                # Botones de idioma alineados a la derecha
                 dpg.add_spacer(width=10)
+
+                # Botones de idioma
                 with dpg.group(horizontal=True):
                     for code, label in [("ES", " ES "), ("FR", " FR "), ("EN", " EN ")]:
                         btn = dpg.add_button(
                             label=label,
                             callback=change_lang,
                             user_data=code,
-                            width=38, height=24,
+                            width=40, height=24,
                         )
                         dpg.bind_item_theme(
                             btn,
@@ -495,11 +541,18 @@ def build_ui():
                     dpg.add_theme_style(dpg.mvStyleVar_WindowPadding, 18, 14)
             dpg.bind_item_theme(dpg.last_item(), body_theme)
 
-            # Campo de entrada
+            # Fila de entrada: [Proyecto] [Tarea...] [+ Anadir]
             with dpg.group(horizontal=True):
                 dpg.add_input_text(
+                    tag="group_input",
+                    hint=T("hint_group"),
+                    width=148,
+                    height=36,
+                )
+                dpg.add_spacer(width=6)
+                dpg.add_input_text(
                     tag="input_task",
-                    hint=T("placeholder"),
+                    hint=T("hint_task"),
                     width=-162,
                     height=36,
                     on_enter=True,
@@ -539,6 +592,20 @@ def build_ui():
             )
             dpg.bind_item_theme(ctr, make_text_theme(TEXT_MID))
 
+            dpg.add_spacer(height=5)
+
+            # Barra de progreso
+            with dpg.group(horizontal=True):
+                dpg.add_progress_bar(
+                    tag="progress_bar",
+                    default_value=0.0,
+                    width=-90,
+                    height=14,
+                )
+                dpg.add_spacer(width=8)
+                pt = dpg.add_text(T("progress", pct=0), tag="progress_text")
+                dpg.bind_item_theme(pt, make_text_theme(TEXT_MID))
+
             dpg.add_spacer(height=8)
 
             # Lista scrollable
@@ -575,14 +642,14 @@ def main():
 
     build_ui()
 
-    dpg.create_viewport(title="Todo Stage", width=WIN_W, height=640, resizable=False)
+    dpg.create_viewport(title="Todo Stage", width=WIN_W, height=WIN_H, resizable=False)
     dpg.set_viewport_clear_color(list(BG_MAIN))
     dpg.setup_dearpygui()
     dpg.show_viewport()
 
-    dpg.set_item_width("main_win",  WIN_W)
-    dpg.set_item_height("main_win", 640)
-    dpg.set_item_pos("main_win",  [0, 0])
+    dpg.set_item_width( "main_win", WIN_W)
+    dpg.set_item_height("main_win", WIN_H)
+    dpg.set_item_pos(   "main_win", [0, 0])
 
     dpg.start_dearpygui()
     dpg.destroy_context()
