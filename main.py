@@ -1,7 +1,11 @@
-import dearpygui.dearpygui as dpg
 import random
 import os
 import json
+
+import dearpygui.dearpygui as dpg
+
+from db import DbTask
+
 
 # ── Paleta ───────────────────────────────────────────────────────────────────
 BG_MAIN        = (240, 235, 225, 255)
@@ -128,18 +132,11 @@ def save_tasks():
         print("Erreur sauvegarde :", e)
 
 
-def load_tasks():
+def load_tasks(db_task: DbTask):
     global tasks, task_counter, current_lang
-    if not os.path.exists(DATA_FILE):
-        return
-    try:
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        tasks = data.get("tasks", [])
-        task_counter = data.get("task_counter", 0)
-        current_lang = data.get("language", "ES")
-    except Exception as e:
-        print("Erreur chargement :", e)
+    tasks = db_task.get_all()
+    task_counter = db_task.get_counter()
+    current_lang = db_task.get_lang()
 
 
 # ── Fuentes ──────────────────────────────────────────────────────────────────
@@ -658,9 +655,9 @@ def build_ui():
 # ── Main ──────────────────────────────────────────────────────────────────────
 def main():
     global font_large
-
+    db_task = DbTask("tasks.json")
     dpg.create_context()
-    load_tasks()
+    load_tasks(db_task)
     apply_theme()
 
     font_normal_path, font_bold_path = find_fonts()
