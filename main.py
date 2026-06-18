@@ -295,10 +295,9 @@ def render_tasks():
     all_groups = sorted(groups.keys())
 
     for group_name, group_tasks in groups.items():
-
         # Cabecera de grupo
         dpg.add_spacer(height=8, parent="task_list_group")
-        grp_hdr = dpg.add_text(f"[ {group_name} ]", parent="task_list_group")
+        grp_hdr = dpg.add_text(f"{group_name}", parent="task_list_group")
         dpg.bind_item_theme(grp_hdr, make_text_theme(ACCENT_TEXT))
         dpg.add_spacer(height=4, parent="task_list_group")
 
@@ -312,7 +311,6 @@ def render_tasks():
         shown_done_hdr = False
 
         for task in ordered:
-
             # Separador de completadas dentro del grupo
             if task["done"] and not shown_done_hdr:
                 pending_in_grp = [t for t in ordered if not t["done"]]
@@ -326,7 +324,7 @@ def render_tasks():
                 shown_done_hdr = True
 
             real_idx = tasks.index(task)
-            card_tag = f"card_{task['tag']}"
+            card_tag = f"card_{task['tag']}_{real_idx}"
             avail_w  = (dpg.get_item_width("task_scroll") or WIN_W) - 22
             h        = estimate_card_height(task["text"])
 
@@ -346,10 +344,14 @@ def render_tasks():
                     dpg.bind_item_theme(card_tag, th_card_normal)
 
                 with dpg.group(horizontal=True):
+                    base_tag = f"{task['tag']}_{real_idx}"
+                    u_tag = f"undo_{base_tag}"
+                    c_tag = f"chk_{base_tag}"
+                    d_tag = f"del_{base_tag}"
+                    t_tag = f"txt_{base_tag}"
 
                     # Boton check / desmarcar
                     if task["done"]:
-                        u_tag = f"undo_{task['tag']}"
                         dpg.add_button(
                             label=T("btn_uncheck"),
                             tag=u_tag,
@@ -359,7 +361,6 @@ def render_tasks():
                         )
                         dpg.bind_item_theme(u_tag, th_undo)
                     else:
-                        c_tag = f"chk_{task['tag']}"
                         dpg.add_button(
                             label=T("btn_check"),
                             tag=c_tag,
@@ -372,7 +373,6 @@ def render_tasks():
                     dpg.add_spacer(width=3)
 
                     # Boton borrar
-                    d_tag = f"del_{task['tag']}"
                     dpg.add_button(
                         label=T("btn_del_card"),
                         tag=d_tag,
@@ -409,7 +409,6 @@ def render_tasks():
                     dpg.add_spacer(width=4)
 
                     # Texto con wrap nativo en pixeles
-                    t_tag = f"txt_{task['tag']}"
                     dpg.add_text(task["text"], tag=t_tag, wrap=TEXT_WRAP_PX)
                     if task["done"]:
                         dpg.bind_item_theme(t_tag, th_txt_done)
@@ -438,6 +437,7 @@ def add_task(sender=None, app_data=None, user_data=None):
         "priority": False,
         "tag":      f"t{task_counter}",
     })
+    # db_task.add(task)
     dpg.set_value("input_task",  "")
     dpg.set_value("group_input", "")
     save_tasks()
