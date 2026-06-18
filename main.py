@@ -1,6 +1,7 @@
 import dearpygui.dearpygui as dpg
 import random
 import os
+import json
 
 # ── Paleta ───────────────────────────────────────────────────────────────────
 BG_MAIN        = (240, 235, 225, 255)
@@ -114,6 +115,31 @@ tasks: list[dict] = []
 task_counter = 0
 current_lang = "ES"
 font_large   = None
+
+DATA_FILE = "tasks.json"
+
+
+def save_tasks():
+    try:
+        data = {"tasks": tasks, "task_counter": task_counter, "language": current_lang}
+        with open(DATA_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+    except Exception as e:
+        print("Erreur sauvegarde :", e)
+
+
+def load_tasks():
+    global tasks, task_counter, current_lang
+    if not os.path.exists(DATA_FILE):
+        return
+    try:
+        with open(DATA_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        tasks = data.get("tasks", [])
+        task_counter = data.get("task_counter", 0)
+        current_lang = data.get("language", "ES")
+    except Exception as e:
+        print("Erreur chargement :", e)
 
 
 # ── Fuentes ──────────────────────────────────────────────────────────────────
@@ -417,12 +443,14 @@ def add_task(sender=None, app_data=None, user_data=None):
     })
     dpg.set_value("input_task",  "")
     dpg.set_value("group_input", "")
+    save_tasks()
     render_tasks()
 
 
 def delete_task(idx: int):
     if 0 <= idx < len(tasks):
         tasks.pop(idx)
+        save_tasks()
         render_tasks()
 
 
@@ -430,6 +458,7 @@ def toggle_done(idx: int):
     if 0 <= idx < len(tasks):
         tasks[idx]["done"]     = not tasks[idx]["done"]
         tasks[idx]["priority"] = False
+        save_tasks()
         render_tasks()
 
 
@@ -437,11 +466,13 @@ def move_task(idx: int, new_group: str):
     if 0 <= idx < len(tasks):
         no_group_label = T("no_group")
         tasks[idx]["group"] = "" if new_group == no_group_label else new_group
+        save_tasks()
         render_tasks()
 
 
 def delete_done(sender=None, app_data=None, user_data=None):
     tasks[:] = [t for t in tasks if not t["done"]]
+    save_tasks()
     render_tasks()
 
 
@@ -455,6 +486,7 @@ def promote_random(sender=None, app_data=None, user_data=None):
     chosen["priority"] = True
     tasks.remove(chosen)
     tasks.insert(0, chosen)
+    save_tasks()
     render_tasks()
 
 
@@ -463,6 +495,7 @@ def change_lang(sender=None, app_data=None, user_data=None):
     if user_data == current_lang:
         return
     current_lang = user_data
+    save_tasks()
     rebuild_ui()
 
 
@@ -471,6 +504,7 @@ def rebuild_ui():
     if dpg.does_item_exist("main_win"):
         dpg.delete_item("main_win")
     build_ui()
+    render_tasks()
     dpg.set_item_width( "main_win", WIN_W)
     dpg.set_item_height("main_win", WIN_H)
     dpg.set_item_pos(   "main_win", [0, 0])
@@ -626,6 +660,7 @@ def main():
     global font_large
 
     dpg.create_context()
+    load_tasks()
     apply_theme()
 
     font_normal_path, font_bold_path = find_fonts()
