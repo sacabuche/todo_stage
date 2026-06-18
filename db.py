@@ -5,8 +5,7 @@ class DbTask(object):
         self.db_path = db_path
         self._data = {
             "counter": 0,
-            "lang": "en",
-            "config": {},
+            "current_lang": "en",
             "tasks": []
         }
         self._refresh_from_file()
@@ -16,8 +15,11 @@ class DbTask(object):
         pass    
 
     def _refresh_from_file(self):
-        with open(self.db_path, 'r', encoding="utf-8") as file:
-            self._data = json.load(file)
+        try:
+          with open(self.db_path, 'r', encoding="utf-8") as file:
+              self._data = json.load(file)
+        except FileNotFoundError:
+            pass
         return self._data
 
     def get_counter(self):
