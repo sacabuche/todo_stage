@@ -6,6 +6,14 @@ import dearpygui.dearpygui as dpg
 
 from db import DbTask
 
+def save_tasks():
+    try:
+        data = {"tasks": tasks, "task_counter": task_counter, "language": current_lang}
+        with open(DATA_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+    except Exception as e:
+        print("Erreur sauvegarde :", e)
+
 
 # ── Paleta ───────────────────────────────────────────────────────────────────
 BG_MAIN        = (240, 235, 225, 255)
@@ -121,16 +129,6 @@ current_lang = "ES"
 font_large   = None
 
 DATA_FILE = "tasks.json"
-
-
-def save_tasks():
-    try:
-        data = {"tasks": tasks, "task_counter": task_counter, "language": current_lang}
-        with open(DATA_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=4)
-    except Exception as e:
-        print("Erreur sauvegarde :", e)
-
 
 def load_tasks(db_task: DbTask):
     global tasks, task_counter, current_lang

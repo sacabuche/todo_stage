@@ -45,11 +45,11 @@ class DbTask(object):
         return self._data.get("tasks", [])
 
     def add(self, task):
-        # append to the current tasks
-        # save the all the task together
-        # return current tasks
-        pass
+        self._data["tasks"].append(task)
+        self._save_to_file(self._data)
+        return self.get_all()
 
     def remove(self, task_id):
-        # Code to remove a task from the JSON database
-        pass
+        self._data["tasks"].pop(task_id)
+        self._save_to_file(self._data)
+        return self.get_all()
