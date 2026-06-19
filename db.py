@@ -1,28 +1,27 @@
 import json
 
+import psycopg2
+from psycopg2.extras import DictCursor
+
 class DbTask(object):
-    def __init__(self, db_path):
-        self.db_path = db_path
+    def __init__(self):
         self._data = {
             "config": {
                 "conter": 0,
-                "current_lang": "en"
+                "current_lang": "EN"
             },
             "tasks": []
         }
-        self._refresh_from_file()
+        self.db = psycopg2.connect(
+          host="localhost",
+          database="postgres",
+          user="postgres",
+          password="Shinka2010"
+        )
 
     def _save_to_file(self, data):
         # Code to save data to the JSON file
         pass    
-
-    def _refresh_from_file(self):
-        try:
-          with open(self.db_path, 'r', encoding="utf-8") as file:
-              self._data = json.load(file)
-        except FileNotFoundError:
-            pass
-        return self._data
 
     def get_counter(self):
         return self.get_config().get("counter", 0)
@@ -42,14 +41,33 @@ class DbTask(object):
         return self._data.get("config", {})
 
     def get_all(self):
-        return self._data.get("tasks", [])
+        cur = self.db.cursor(cursor_factory=DictCursor)
+        cur.execute("SELECT * FROM tasks")
+        rows = cur.fetchall()
+        cur.close()
+        return rows
 
     def add(self, task):
-        self._data["tasks"].append(task)
-        self._save_to_file(self._data)
-        return self.get_all()
+        cur = self.db.cursor()
+        cur.execute(
+            """
+            INSERT INTO tasks (text, "group", done, priority, tag)
+            VALUES (%s, %s, %s, %s, %s)
+            """,
+            (
+                task["text"],
+                task["group"],
+                task["done"],
+                task["priority"],
+                task["tag"]
+            )
+        )
+        self.db.commit()
+        cur.close()
 
     def remove(self, task_id):
-        self._data["tasks"].pop(task_id)
-        self._save_to_file(self._data)
+        cur = self.db.cursor()
+        cur.execute("DELETE FROM tasks WHERE tag = %s", (task_id,))
+        self.db.commit()
+        cur.close()
         return self.get_all()

@@ -3,8 +3,11 @@ import os
 import json
 
 import dearpygui.dearpygui as dpg
-import psycopg2
+
 from db import DbTask
+
+db_task = DbTask()
+
 
 def save_tasks():
     try:
@@ -123,7 +126,6 @@ LANGS = {
 }
 
 # ── Estado ───────────────────────────────────────────────────────────────────
-tasks: list[dict] = []
 task_counter = 0
 current_lang = "ES"
 font_large   = None
@@ -281,6 +283,7 @@ def estimate_card_height(text: str) -> int:
 
 # ── Contador y barra de progreso ─────────────────────────────────────────────
 def update_counter():
+    tasks = db_task.get_all()
     total   = len(tasks)
     done    = sum(1 for t in tasks if t["done"])
     pending = total - done
@@ -294,6 +297,8 @@ def update_counter():
 def render_tasks():
     for child in dpg.get_item_children("task_list_group", slot=1) or []:
         dpg.delete_item(child)
+
+    tasks = db_task.get_all()
 
     if not tasks:
         dpg.add_spacer(height=16, parent="task_list_group")
@@ -462,17 +467,16 @@ def add_task(sender=None, app_data=None, user_data=None):
     if not raw:
         return
     task_counter += 1
-    tasks.append({
+    task = {
         "text":     raw,
         "group":    group,
         "done":     False,
         "priority": False,
         "tag":      f"t{task_counter}",
-    })
-    # db_task.add(task)
+    }
+    db_task.add(task)
     dpg.set_value("input_task",  "")
     dpg.set_value("group_input", "")
-    save_tasks()
     render_tasks()
 
 
@@ -687,7 +691,6 @@ def build_ui():
 # ── Main ──────────────────────────────────────────────────────────────────────
 def main():
     global font_large
-    db_task = DbTask("tasks.json")
     dpg.create_context()
     load_tasks(db_task)
     apply_theme()
@@ -705,7 +708,7 @@ def main():
             font_large = None
 
     build_ui()
-
+    render_tasks()
     dpg.create_viewport(title="Todo Stage", width=WIN_W, height=WIN_H, resizable=False)
     dpg.set_viewport_clear_color(list(BG_MAIN))
     dpg.setup_dearpygui()
@@ -721,4 +724,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
