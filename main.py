@@ -3,7 +3,7 @@ import os
 import json
 
 import dearpygui.dearpygui as dpg
-
+import psycopg2
 from db import DbTask
 
 def save_tasks():
@@ -213,9 +213,12 @@ def make_card_theme(bg, border):
     with dpg.theme() as t:
         with dpg.theme_component(dpg.mvChildWindow):
             dpg.add_theme_color(dpg.mvThemeCol_ChildBg, bg)
-            dpg.add_theme_color(dpg.mvThemeCol_Border,  border)
-            dpg.add_theme_style(dpg.mvStyleVar_ChildRounding,  9)
-            dpg.add_theme_style(dpg.mvStyleVar_WindowPadding,  10, 8)
+            dpg.add_theme_color(dpg.mvThemeCol_Border, border)
+            dpg.add_theme_style(dpg.mvStyleVar_ChildRounding, 9)
+
+            # marge interne de la carte
+            dpg.add_theme_style(dpg.mvStyleVar_WindowPadding, 30, 8)
+
     return t
 
 
@@ -227,22 +230,53 @@ def make_text_theme(color):
 
 
 # ── Calculo de altura de tarjeta ─────────────────────────────────────────────
+# Marges du texte à l'intérieur de la carte
+TEXT_MARGIN_LEFT  = 20
+TEXT_MARGIN_RIGHT = 20
+
 def estimate_card_height(text: str) -> int:
-    """Calcula cuantas lineas necesita el texto y devuelve la altura de la tarjeta."""
-    chars_per_line = max(1, int(TEXT_WRAP_PX / CHAR_W))
-    words   = text.split()
-    lines   = 1
+    """
+    Calcule la hauteur de la carte en tenant compte
+    des marges gauche/droite du texte.
+    """
+
+    # Largeur réellement disponible pour le texte
+    available_width = (
+        TEXT_WRAP_PX
+        - TEXT_MARGIN_LEFT
+        - TEXT_MARGIN_RIGHT
+    )
+
+    chars_per_line = max(
+        1,
+        int(available_width / CHAR_W)
+    )
+
+    words = text.split()
+
+    lines = 1
     cur_len = 0
+
     for word in words:
-        wl = len(word)
+
+        word_len = len(word)
+
+        # premier mot de la ligne
         if cur_len == 0:
-            cur_len = wl
-        elif cur_len + 1 + wl <= chars_per_line:
-            cur_len += 1 + wl
+            cur_len = word_len
+
+        # le mot rentre encore
+        elif cur_len + 1 + word_len <= chars_per_line:
+            cur_len += 1 + word_len
+
+        # nouvelle ligne
         else:
             lines += 1
-            cur_len = wl
-    return CARD_BASE_H + max(0, lines - 1) * LINE_H
+            cur_len = word_len
+
+    height = CARD_BASE_H + (lines - 1) * LINE_H
+
+    return height
 
 
 # ── Contador y barra de progreso ─────────────────────────────────────────────
@@ -687,3 +721,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
